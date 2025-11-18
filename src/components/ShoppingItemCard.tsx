@@ -44,10 +44,12 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newPrice = parseInt(e.target.value, 10);
-    if (!isNaN(newPrice)) {
-      onUpdate({ ...item, price: newPrice });
-    }
+    const value = e.target.value;
+    const updatedItem: ShoppingItem = {
+      ...item,
+      price: value === '' ? null : parseInt(value, 10) || 0
+    };
+    onUpdate(updatedItem);
   };
 
   const togglePurchaseStatus = useCallback(() => {
@@ -101,12 +103,20 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
 
 
   const priceOptions = useMemo(() => {
-    const options = new Set<number>();
-    for (let i = 0; i <= 100; i++) {
+    const options = new Set<number | null>();
+    options.add(null); // 価格未定を最初に追加
+    options.add(0); // 0円を追加
+    for (let i = 1; i <= 100; i++) {
         options.add(i * 100);
     }
-    options.add(item.price); // Ensure current price is always an option
-    return Array.from(options).sort((a, b) => a - b);
+    if (item.price !== null) {
+      options.add(item.price); // Ensure current price is always an option
+    }
+    return Array.from(options).sort((a, b) => {
+      if (a === null) return -1;
+      if (b === null) return 1;
+      return a - b;
+    });
   }, [item.price]);
 
 
@@ -249,15 +259,17 @@ const ShoppingItemCard: React.FC<ShoppingItemCardProps> = ({
           <span className={`font-semibold w-16 text-left ${currentStatus.color}`}>{currentStatus.label}</span>
         </button>
         <div className="flex items-center">
-            <span className="text-slate-500 dark:text-slate-400 mr-1">¥</span>
+            {item.price !== null && <span className="text-slate-500 dark:text-slate-400 mr-1">¥</span>}
             <select
-              value={item.price}
+              value={item.price === null ? '' : item.price}
               onChange={handlePriceChange}
-              className="w-28 text-md font-semibold bg-slate-100 dark:bg-slate-700 rounded-md py-1 pl-2 pr-8 text-right focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none"
+              className={`w-28 text-md font-semibold bg-slate-100 dark:bg-slate-700 rounded-md py-1 pl-2 pr-8 text-right focus:ring-2 focus:ring-blue-500 focus:outline-none appearance-none ${
+                item.price === null ? 'text-red-600 dark:text-red-400' : ''
+              }`}
             >
               {priceOptions.map(p => (
-                <option key={p} value={p}>
-                  {p.toLocaleString()}
+                <option key={p === null ? '' : p} value={p === null ? '' : p}>
+                  {p === null ? '価格未定' : p === 0 ? '0' : p.toLocaleString()}
                 </option>
               ))}
             </select>
